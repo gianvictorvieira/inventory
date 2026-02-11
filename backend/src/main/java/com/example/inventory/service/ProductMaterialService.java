@@ -6,6 +6,7 @@ import com.example.inventory.model.ProductMaterial;
 import com.example.inventory.model.RawMaterial;
 import com.example.inventory.repository.ProductMaterialRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -28,7 +29,13 @@ public class ProductMaterialService {
         return productMaterialRepository.findByProductId(productId);
     }
 
-    public ProductMaterial create(Long productId, ProductMaterialRequest request) {
+    /**
+     * ✅ UPSERT:
+     * se já existe vínculo (productId + rawMaterialId) -> atualiza requiredQuantity
+     * senão -> cria novo
+     */
+    @Transactional
+    public ProductMaterial upsert(Long productId, ProductMaterialRequest request) {
 
         Product product = productService.findById(productId);
         RawMaterial rawMaterial = rawMaterialService.findById(request.rawMaterialId());
@@ -36,31 +43,16 @@ public class ProductMaterialService {
         return productMaterialRepository
                 .findByProductIdAndRawMaterialId(productId, request.rawMaterialId())
                 .map(existing -> {
-                    // If relation already exists → update quantity
                     existing.setRequiredQuantity(request.requiredQuantity());
                     return productMaterialRepository.save(existing);
                 })
                 .orElseGet(() -> {
-                    // If not exists → create new relation
-                    ProductMaterial productMaterial = new ProductMaterial();
-                    productMaterial.setProduct(product);
-                    productMaterial.setRawMaterial(rawMaterial);
-                    productMaterial.setRequiredQuantity(request.requiredQuantity());
-                    return productMaterialRepository.save(productMaterial);
+                    ProductMaterial pm = new ProductMaterial();
+                    pm.setProduct(product);
+                    pm.setRawMaterial(rawMaterial);
+                    pm.setRequiredQuantity(request.requiredQuantity());
+                    return productMaterialRepository.save(pm);
                 });
-    }
-
-    public ProductMaterial update(Long id, ProductMaterialRequest request) {
-
-        ProductMaterial productMaterial = productMaterialRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Product material not found"));
-
-        RawMaterial rawMaterial = rawMaterialService.findById(request.rawMaterialId());
-
-        productMaterial.setRawMaterial(rawMaterial);
-        productMaterial.setRequiredQuantity(request.requiredQuantity());
-
-        return productMaterialRepository.save(productMaterial);
     }
 
     public void delete(Long id) {

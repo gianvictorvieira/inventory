@@ -28,4 +28,5 @@ public class RawMaterial {
     public void setName(String name) { this.name = name; }
     public Integer getStockQuantity() { return stockQuantity; }
     public void setStockQuantity(Integer stockQuantity) { this.stockQuantity = stockQuantity; }
+    
 }

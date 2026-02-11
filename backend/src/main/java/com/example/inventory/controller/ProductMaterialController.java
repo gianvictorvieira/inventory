@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/api/products")
 public class ProductMaterialController {
 
     private final ProductMaterialService productMaterialService;
@@ -18,22 +18,19 @@ public class ProductMaterialController {
         this.productMaterialService = productMaterialService;
     }
 
-    @GetMapping("/products/{productId}/materials")
-    public List<ProductMaterial> listByProduct(@PathVariable Long productId) {
+    @GetMapping("/{productId}/materials")
+    public List<ProductMaterial> list(@PathVariable Long productId) {
         return productMaterialService.findByProductId(productId);
     }
 
-    @PostMapping("/products/{productId}/materials")
-    public ProductMaterial create(@PathVariable Long productId, @Valid @RequestBody ProductMaterialRequest request) {
-        return productMaterialService.create(productId, request);
+    // ✅ UPSERT (não duplica)
+    @PostMapping("/{productId}/materials")
+    public ProductMaterial upsert(@PathVariable Long productId,
+                                  @Valid @RequestBody ProductMaterialRequest request) {
+        return productMaterialService.upsert(productId, request);
     }
 
-    @PutMapping("/product-materials/{id}")
-    public ProductMaterial update(@PathVariable Long id, @Valid @RequestBody ProductMaterialRequest request) {
-        return productMaterialService.update(id, request);
-    }
-
-    @DeleteMapping("/product-materials/{id}")
+    @DeleteMapping("/materials/{id}")
     public void delete(@PathVariable Long id) {
         productMaterialService.delete(id);
     }
