@@ -62,12 +62,13 @@ public class ProductionPlanningService {
             grandTotal = grandTotal.add(totalValue);
 
             items.add(new ProductionSuggestionItem(
-                    product.getId(),
-                    product.getName(),
-                    product.getValue(),
-                    maxProducible,
-                    totalValue
+            product.getId(),
+            product.getName(),
+            maxProducible,
+            totalValue   // já é BigDecimal
             ));
+
+
         }
 
         return new ProductionSuggestionResponse(items, grandTotal);

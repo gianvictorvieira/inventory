@@ -29,23 +29,37 @@ public class ProductMaterialService {
     }
 
     public ProductMaterial create(Long productId, ProductMaterialRequest request) {
+
         Product product = productService.findById(productId);
         RawMaterial rawMaterial = rawMaterialService.findById(request.rawMaterialId());
 
-        ProductMaterial productMaterial = new ProductMaterial();
-        productMaterial.setProduct(product);
-        productMaterial.setRawMaterial(rawMaterial);
-        productMaterial.setRequiredQuantity(request.requiredQuantity());
-        return productMaterialRepository.save(productMaterial);
+        return productMaterialRepository
+                .findByProductIdAndRawMaterialId(productId, request.rawMaterialId())
+                .map(existing -> {
+                    // If relation already exists → update quantity
+                    existing.setRequiredQuantity(request.requiredQuantity());
+                    return productMaterialRepository.save(existing);
+                })
+                .orElseGet(() -> {
+                    // If not exists → create new relation
+                    ProductMaterial productMaterial = new ProductMaterial();
+                    productMaterial.setProduct(product);
+                    productMaterial.setRawMaterial(rawMaterial);
+                    productMaterial.setRequiredQuantity(request.requiredQuantity());
+                    return productMaterialRepository.save(productMaterial);
+                });
     }
 
     public ProductMaterial update(Long id, ProductMaterialRequest request) {
+
         ProductMaterial productMaterial = productMaterialRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Product material not found"));
+
         RawMaterial rawMaterial = rawMaterialService.findById(request.rawMaterialId());
 
         productMaterial.setRawMaterial(rawMaterial);
         productMaterial.setRequiredQuantity(request.requiredQuantity());
+
         return productMaterialRepository.save(productMaterial);
     }
 

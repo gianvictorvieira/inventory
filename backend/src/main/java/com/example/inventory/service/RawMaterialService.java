@@ -6,6 +6,7 @@ import com.example.inventory.repository.RawMaterialRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class RawMaterialService {
@@ -26,10 +27,21 @@ public class RawMaterialService {
     }
 
     public RawMaterial create(RawMaterialRequest request) {
-        RawMaterial material = new RawMaterial();
-        material.setName(request.name());
-        material.setStockQuantity(request.stockQuantity());
-        return rawMaterialRepository.save(material);
+        // Verifica se já existe material com o mesmo nome
+        Optional<RawMaterial> existing = rawMaterialRepository.findByName(request.name());
+
+        if (existing.isPresent()) {
+            // Atualiza quantidade no estoque
+            RawMaterial material = existing.get();
+            material.setStockQuantity(material.getStockQuantity() + request.stockQuantity());
+            return rawMaterialRepository.save(material);
+        } else {
+            // Cria novo registro
+            RawMaterial material = new RawMaterial();
+            material.setName(request.name());
+            material.setStockQuantity(request.stockQuantity());
+            return rawMaterialRepository.save(material);
+        }
     }
 
     public RawMaterial update(Long id, RawMaterialRequest request) {
