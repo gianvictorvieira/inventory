@@ -10,6 +10,10 @@ const PAGES = {
   PLANNING: 'planning'
 }
 
+import { useEffect, useState } from 'react'
+
+const API = 'http://localhost:8080/api'
+
 async function request(path, options = {}) {
   const response = await fetch(`${API}${path}`, {
     headers: { 'Content-Type': 'application/json' },
@@ -53,6 +57,7 @@ export default function App() {
   const [page, setPage] = useState(PAGES.DASHBOARD)
   const [error, setError] = useState('')
 
+export default function App() {
   const [products, setProducts] = useState([])
   const [materials, setMaterials] = useState([])
   const [selectedProduct, setSelectedProduct] = useState('')
@@ -77,6 +82,14 @@ export default function App() {
     } catch (err) {
       setError(err.message)
     }
+    const [p, m, s] = await Promise.all([
+      request('/products'),
+      request('/raw-materials'),
+      request('/production/suggestions')
+    ])
+    setProducts(p)
+    setMaterials(m)
+    setSuggestion(s)
   }
 
   useEffect(() => { loadAll() }, [])
@@ -89,6 +102,8 @@ export default function App() {
     request(`/products/${selectedProduct}/materials`)
       .then(setProductMaterials)
       .catch((err) => setError(err.message))
+    if (!selectedProduct) return
+    request(`/products/${selectedProduct}/materials`).then(setProductMaterials)
   }, [selectedProduct])
 
   const submitProduct = async (e) => {
@@ -101,6 +116,9 @@ export default function App() {
     } catch (err) {
       setError(err.message)
     }
+    await request('/products', { method: 'POST', body: JSON.stringify({ ...productForm, value: Number(productForm.value) }) })
+    setProductForm({ name: '', value: '' })
+    loadAll()
   }
 
   const submitMaterial = async (e) => {
@@ -113,6 +131,9 @@ export default function App() {
     } catch (err) {
       setError(err.message)
     }
+    await request('/raw-materials', { method: 'POST', body: JSON.stringify({ ...materialForm, stockQuantity: Number(materialForm.stockQuantity) }) })
+    setMaterialForm({ name: '', stockQuantity: '' })
+    loadAll()
   }
 
   const submitLink = async (e) => {
@@ -162,6 +183,22 @@ export default function App() {
 
       {page === PAGES.PRODUCTS && (
         <section className="card">
+    await request(`/products/${selectedProduct}/materials`, {
+      method: 'POST',
+      body: JSON.stringify({ rawMaterialId: Number(linkForm.rawMaterialId), requiredQuantity: Number(linkForm.requiredQuantity) })
+    })
+    setLinkForm({ rawMaterialId: '', requiredQuantity: '' })
+    const data = await request(`/products/${selectedProduct}/materials`)
+    setProductMaterials(data)
+    loadAll()
+  }
+
+  return (
+    <main className="container">
+      <h1>Inventory Production Planner</h1>
+
+      <section className="grid">
+        <article className="card">
           <h2>Products</h2>
           <form onSubmit={submitProduct} className="form">
             <input value={productForm.name} onChange={(e) => setProductForm({ ...productForm, name: e.target.value })} placeholder="Name" required />
@@ -174,6 +211,9 @@ export default function App() {
 
       {page === PAGES.MATERIALS && (
         <section className="card">
+        </article>
+
+        <article className="card">
           <h2>Raw Materials</h2>
           <form onSubmit={submitMaterial} className="form">
             <input value={materialForm.name} onChange={(e) => setMaterialForm({ ...materialForm, name: e.target.value })} placeholder="Name" required />
@@ -186,12 +226,16 @@ export default function App() {
 
       {page === PAGES.COMPOSITION && (
         <section className="card">
+        </article>
+
+        <article className="card">
           <h2>Product Composition</h2>
           <select value={selectedProduct} onChange={(e) => setSelectedProduct(e.target.value)}>
             <option value="">Select Product</option>
             {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
           <form onSubmit={submitLink} className="form top-gap">
+          <form onSubmit={submitLink} className="form">
             <select value={linkForm.rawMaterialId} onChange={(e) => setLinkForm({ ...linkForm, rawMaterialId: e.target.value })} required>
               <option value="">Select Material</option>
               {materials.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
@@ -218,6 +262,20 @@ export default function App() {
           <strong>Grand Total Value: ${suggestion.grandTotalValue}</strong>
         </section>
       )}
+        </article>
+      </section>
+
+      <section className="card">
+        <h2>Suggested Production (higher value first)</h2>
+        <ul>
+          {suggestion.items.map((item) => (
+            <li key={item.productId}>
+              {item.productName}: {item.producibleQuantity} units - total ${item.totalValue}
+            </li>
+          ))}
+        </ul>
+        <strong>Grand Total Value: ${suggestion.grandTotalValue}</strong>
+      </section>
     </main>
   )
 }
